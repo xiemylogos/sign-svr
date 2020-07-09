@@ -12,8 +12,8 @@ const (
 
 var (
 	TxRawFlag = cli.StringFlag{
-		Name:  "txraw",
-		Usage: "tx raw",
+		Name:  "rawTx",
+		Usage: "raw tx",
 		Value: DEFAULT_TX_RAW,
 	}
 	WalletFileFlag = cli.StringFlag{

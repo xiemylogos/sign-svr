@@ -9,7 +9,7 @@ import (
 )
 
 var SignCommand = cli.Command{
-	Name:        "signtx",
+	Name:        "signTx",
 	Usage:       "ont sign",
 	Description: "sign rawTx use wallet",
 	Action:      SignTx,
@@ -38,14 +38,14 @@ func SignTx(ctx *cli.Context) error {
 		fmt.Errorf("SignSvr GetTxData failed:%s", err)
 		return fmt.Errorf("SignSvr GetTxData failed:%s", err)
 	}
-	fmt.Printf("signed tx:%s\n", txData)
+	fmt.Printf("signed tx: %s\n", txData)
 	txn, err := utils.TransactionFromHexString(txData)
 	if err != nil {
 		fmt.Errorf("transaction from raw err:%s", err)
 		return fmt.Errorf("transaction from raw err:%s", err)
 	}
 	var hash = txn.Hash()
-	fmt.Printf("signed txHash:%s\n", hash.ToHexString())
+	fmt.Printf("signed txHash: %s\n", hash.ToHexString())
 	return nil
 }
 func checkFileName(ctx *cli.Context) string {
