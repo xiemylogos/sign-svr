@@ -8,6 +8,7 @@ import (
 const (
 	DEFAULT_WALLET_FILE_NAME = "./wallet.dat"
 	DEFAULT_TX_RAW           = ""
+	DEFAULT_TX_HASH
 )
 
 var (
@@ -15,6 +16,11 @@ var (
 		Name:  "rawTx",
 		Usage: "raw tx",
 		Value: DEFAULT_TX_RAW,
+	}
+	TxHashFlag = cli.StringFlag{
+		Name:  "txHash",
+		Usage: "tx hash",
+		Value: DEFAULT_TX_HASH,
 	}
 	WalletFileFlag = cli.StringFlag{
 		Name:  "wallet,w",

@@ -13,6 +13,7 @@ func setupAPP() *cli.App {
 	app.Action = startAgent
 	app.Commands = []cli.Command{
 		cmd.SignCommand,
+		cmd.SignHashCommand,
 	}
 	app.Before = func(context *cli.Context) error {
 		runtime.GOMAXPROCS(runtime.NumCPU())

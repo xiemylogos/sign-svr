@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/howeyc/gopass"
 	sdk "github.com/ontio/ontology-go-sdk"
@@ -10,11 +11,21 @@ import (
 
 var SignCommand = cli.Command{
 	Name:        "signTx",
-	Usage:       "ont sign",
+	Usage:       "ont tx rawsign",
 	Description: "sign rawTx use wallet",
 	Action:      SignTx,
 	Flags: []cli.Flag{
 		TxRawFlag,
+	},
+}
+
+var SignHashCommand = cli.Command{
+	Name:        "signTxHash",
+	Usage:       "ont tx hash sign",
+	Description: "sign tx hash use wallet",
+	Action:      SignTxHash,
+	Flags: []cli.Flag{
+		TxHashFlag,
 	},
 }
 
@@ -48,6 +59,24 @@ func SignTx(ctx *cli.Context) error {
 	fmt.Printf("signed txHash: %s\n", hash.ToHexString())
 	return nil
 }
+
+func SignTxHash(ctx *cli.Context) error {
+	ontSdk := sdk.NewOntologySdk()
+	txHash := ctx.String(GetFlagName(TxHashFlag))
+	optionFile := checkFileName(ctx)
+	acc, err := OpenAccount(optionFile, ontSdk)
+	if err != nil {
+		fmt.Errorf("open account err:%s", err)
+		return fmt.Errorf("open account err:%s", err)
+	}
+	sigData, err := acc.Sign([]byte(txHash))
+	if err != nil {
+		return fmt.Errorf("sign error:%s", err)
+	}
+	fmt.Printf("signed txHash:%s\n",hex.EncodeToString(sigData))
+	return nil
+}
+
 func checkFileName(ctx *cli.Context) string {
 	if ctx.IsSet(GetFlagName(WalletFileFlag)) {
 		return ctx.String(GetFlagName(WalletFileFlag))
