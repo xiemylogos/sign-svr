@@ -4,27 +4,32 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/howeyc/gopass"
+	"github.com/ontio/ontology-crypto/keypair"
+	"github.com/ontio/ontology-crypto/signature"
 	sdk "github.com/ontio/ontology-go-sdk"
 	"github.com/ontio/ontology-go-sdk/utils"
 	"github.com/urfave/cli"
 )
 
 var SignCommand = cli.Command{
-	Name:        "signTx",
+	Name:        "signtx",
 	Usage:       "ont tx rawsign",
 	Description: "sign rawTx use wallet",
 	Action:      SignTx,
 	Flags: []cli.Flag{
+		AddrFlag,
+		PayerFlag,
 		TxRawFlag,
 	},
 }
 
 var SignHashCommand = cli.Command{
-	Name:        "signTxHash",
+	Name:        "signtxhash",
 	Usage:       "ont tx hash sign",
 	Description: "sign tx hash use wallet",
 	Action:      SignTxHash,
 	Flags: []cli.Flag{
+		AddrFlag,
 		TxHashFlag,
 	},
 }
@@ -38,12 +43,32 @@ func SignTx(ctx *cli.Context) error {
 		return fmt.Errorf("SignSvr GetMutableTx failed:%s", err)
 	}
 	optionFile := checkFileName(ctx)
-	acc, err := OpenAccount(optionFile, ontSdk)
+	acc, err := OpenAccount(optionFile, ontSdk, ctx.String(GetFlagName(AddrFlag)))
 	if err != nil {
 		fmt.Errorf("open account err:%s", err)
 		return fmt.Errorf("open account err:%s", err)
 	}
 	err = ontSdk.SignToTransaction(mutableTx, acc)
+	if err != nil {
+		return fmt.Errorf("sign tx err:%s", err)
+	}
+	if ctx.String(GetFlagName(PayerFlag)) != "" {
+		payer, err := OpenAccount(optionFile, ontSdk, ctx.String(GetFlagName(PayerFlag)))
+		if err != nil {
+			fmt.Errorf("open account err:%s", err)
+			return fmt.Errorf("open account err:%s", err)
+		}
+		err = ontSdk.SignToTransaction(mutableTx, payer)
+		if err != nil {
+			return fmt.Errorf("sign tx err:%s", err)
+		}
+	}
+	for _,sig := range mutableTx.Sigs {
+		sigdata := sig.SigData[0]
+		fmt.Printf("publickey:= %s\n",hex.EncodeToString(keypair.SerializePublicKey(sig.PubKeys[0])))
+
+		fmt.Printf("sigdata:= %s\n",hex.EncodeToString(sigdata))
+	}
 	txData, err := ontSdk.GetTxData(mutableTx)
 	if err != nil {
 		fmt.Errorf("SignSvr GetTxData failed:%s", err)
@@ -64,16 +89,25 @@ func SignTxHash(ctx *cli.Context) error {
 	ontSdk := sdk.NewOntologySdk()
 	txHash := ctx.String(GetFlagName(TxHashFlag))
 	optionFile := checkFileName(ctx)
-	acc, err := OpenAccount(optionFile, ontSdk)
+	acc, err := OpenAccount(optionFile, ontSdk, ctx.String(GetFlagName(AddrFlag)))
 	if err != nil {
 		fmt.Errorf("open account err:%s", err)
 		return fmt.Errorf("open account err:%s", err)
 	}
-	sigData, err := acc.Sign([]byte(txHash))
+	sigData, err := signature.Sign(acc.SigScheme, acc.PrivateKey, []byte(txHash), nil)
 	if err != nil {
 		return fmt.Errorf("sign error:%s", err)
 	}
-	fmt.Printf("signed txHash:%s\n",hex.EncodeToString(sigData))
+	if !signature.Verify(acc.PublicKey,[]byte(txHash),sigData) {
+		fmt.Println("verify sign err")
+		return fmt.Errorf("verify sign err")
+	}
+	buf, err := signature.Serialize(sigData)
+	if err != nil {
+		fmt.Println("sig serialize err")
+		return fmt.Errorf("sig serialize err")
+	}
+	fmt.Printf("signed txHash:%s\n", hex.EncodeToString(buf))
 	return nil
 }
 
@@ -84,7 +118,7 @@ func checkFileName(ctx *cli.Context) string {
 		return DEFAULT_WALLET_FILE_NAME
 	}
 }
-func OpenAccount(path string, ontSdk *sdk.OntologySdk) (*sdk.Account, error) {
+func OpenAccount(path string, ontSdk *sdk.OntologySdk, addr string) (*sdk.Account, error) {
 	wallet, err := ontSdk.OpenWallet(path)
 	if err != nil {
 		return nil, err
@@ -94,7 +128,8 @@ func OpenAccount(path string, ontSdk *sdk.OntologySdk) (*sdk.Account, error) {
 		return nil, err
 	}
 	defer ClearPasswd(pwd)
-	account, err := wallet.GetDefaultAccount(pwd)
+	account, err := wallet.GetAccountByAddress(addr, pwd)
+	//account, err := wallet.GetDefaultAccount(pwd)
 	if err != nil {
 		return nil, err
 	}
