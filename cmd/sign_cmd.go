@@ -63,11 +63,11 @@ func SignTx(ctx *cli.Context) error {
 			return fmt.Errorf("sign tx err:%s", err)
 		}
 	}
-	for _,sig := range mutableTx.Sigs {
+	for _, sig := range mutableTx.Sigs {
 		sigdata := sig.SigData[0]
-		fmt.Printf("publickey:= %s\n",hex.EncodeToString(keypair.SerializePublicKey(sig.PubKeys[0])))
+		fmt.Printf("publickey:= %s\n", hex.EncodeToString(keypair.SerializePublicKey(sig.PubKeys[0])))
 
-		fmt.Printf("sigdata:= %s\n",hex.EncodeToString(sigdata))
+		fmt.Printf("sigdata:= %s\n", hex.EncodeToString(sigdata))
 	}
 	txData, err := ontSdk.GetTxData(mutableTx)
 	if err != nil {
@@ -87,18 +87,22 @@ func SignTx(ctx *cli.Context) error {
 
 func SignTxHash(ctx *cli.Context) error {
 	ontSdk := sdk.NewOntologySdk()
-	txHash := ctx.String(GetFlagName(TxHashFlag))
 	optionFile := checkFileName(ctx)
+	txHash, err := hex.DecodeString(ctx.String(GetFlagName(TxHashFlag)))
+	if err != nil {
+		fmt.Errorf("DecodeString txHash err:%s\n", err)
+		return fmt.Errorf("decode string err:%sn", err)
+	}
 	acc, err := OpenAccount(optionFile, ontSdk, ctx.String(GetFlagName(AddrFlag)))
 	if err != nil {
 		fmt.Errorf("open account err:%s", err)
 		return fmt.Errorf("open account err:%s", err)
 	}
-	sigData, err := signature.Sign(acc.SigScheme, acc.PrivateKey, []byte(txHash), nil)
+	sigData, err := signature.Sign(acc.SigScheme, acc.PrivateKey, txHash, nil)
 	if err != nil {
 		return fmt.Errorf("sign error:%s", err)
 	}
-	if !signature.Verify(acc.PublicKey,[]byte(txHash),sigData) {
+	if !signature.Verify(acc.PublicKey, txHash, sigData) {
 		fmt.Println("verify sign err")
 		return fmt.Errorf("verify sign err")
 	}
